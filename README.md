@@ -523,7 +523,12 @@ Reference: [DigitalOcean](https://www.digitalocean.com/community/tutorials/how-t
         ```
         grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo a2ensite catalog.wsgi         
         ```
+    * Note: You may need to disable the default site. Do this using:
     
+        ```
+        grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo a2dissite 000-default.conf         
+        ```
+	
     (b) - Create the `catalog.wsgi` file that was defined in the host.
     
     - Go back to the `Catalog` folder:
@@ -560,13 +565,13 @@ Reference: [DigitalOcean](https://www.digitalocean.com/community/tutorials/how-t
 5. Clone Your (Project 3 - Item Catalog) respository
 
     ```
-    grader@ip-10-20-30-101:/var/www/Catalog$ git clone https://github.com/elnobun/Item-Catalog-Movie-Collection-App-.git
+    grader@ip-10-20-30-101:/var/www/Catalog$ git clone https://github.com/trvillan/CatalogApp.git
     ```
 
 6. Move all the contents of your cloned respository directory into `/var/www/Catalog/catalog`, and delete empty directory.
 
     ```
-    grader@ip-10-20-30-101:/var/www/Catalog$ mv Item-Catalog-Movie-Collection-App-/* /var/Catalog/catalog
+    grader@ip-10-20-30-101:/var/www/Catalog$ mv CatalogApp/* /var/Catalog/catalog
     ```
     
 7. Render your respository inaccessible:
@@ -600,6 +605,270 @@ Reference: [DigitalOcean](https://www.digitalocean.com/community/tutorials/how-t
     (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo pip install sqlalchemy
     ```
     Restart apache: `sudo apache2ctl restart`.
+     *Note*:  If installs fail try without sudo.
+
+----------
+
+### I - Install and configure PostgreSQL with default settings to not allow remote Connection:
+Reference: [DigitalOcean](https://www.digitalocean.com/community/tutorials/how-to-secure-postgresql-on-an-ubuntu-vps)
+
+1. Install the PostgreSQL database:
+
+    ```
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo apt-get install postgresql postgresql-contrib
+    ```
+
+2.  Ensure that no remote connections are allowed. It should be default.
+
+    ```
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo nano /etc/postgresql/9.3/main/pg_hba.conf
+    ```
+    
+3.  Open your project 3 `database_setup.py` file:
+
+    ```
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo nano database_setup.py
+    ```
+    
+4.  Effect these changes:
+
+    (a) - Go to the line that has this syntax:
+    
+    ```python
+    engine = create_engine('sqlite:///YOUR-DATABASE-NAME.db')
+    ```
+    
+    (b) - Change the above syntax to a Postgresql database engine like so.
+    
+    ```python
+    engine = create_engine('postgresql://catalog:DB-PASSWORD@localhost/catalog')
+    ```
+    you should put down a password where you have DB-PASSWORD. Make sure you rememebr the password because you will need it later.
+    
+    Also, effect the above changes in your main `catalog.py` file.
+    
+    (c.)  - Rename your `catalog.py', to `__init__.py`
+    
+    ```
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ mv YOUR_APP.py __init__.py
+    ```
+    
+    *Note*:  You also need to change your 'catalog.wsgi` file to reflects this change. It should read like so:
+    
+    ```python
+    #!/user/bin/python
+    import sys
+    import logging
+    logging.basicConfig(stream=sys.stderr)
+    sys.path.insert(0,"/var/www/Catalog/catalog/")
+
+    from __init__ import app as application
+    application.secret_key = 'Add your secret key'
+    ```
+
+----------
+
+
+### J - Create a new user: `catalog`, add user to PostgreSQL databse with limited permissions to catalog application database.
+
+1.  Create a user `catalog` for psql:
+
+    ```
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo adduser catalog
+    
+    choose a password for that user.
+    ```
+    
+2.  Change to the default user `Postgres`
+
+    ```
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo su - postgres
+    postgres@ip-10-20-25-175:~$ 
+    ```
+    
+    Connect to the postgres system:
+    
+    ```
+    postgres@ip-10-20-30-101:~$ psql
+    ```
+    
+    You see this:
+    
+    ```
+    psql (9.3.12)
+    Type "help" for help.
+
+    postgres=# 
+    ```
+    
+3.  Add the postgres user: `catalog` and setup users parameters.
+
+    (a) - Create user `catalog` with a `login role` and `password`
+    
+    ```
+    postgres=# CREATE USER catalog WITH PASSWORD 'DB-PASSWORD';
+    ```
+    *Note* : The *DB-PASSWORD*, should be the same password you used to create the postgresql engine in your database_setup.py file.
+    
+    (b) - Allow the user `catalog` to be able to create databse tables
+    
+    ```
+    postgres=# ALTER USER catalog CREATEDB;
+    ```
+    You can list the roles available in postgres, and their attribute:
+    
+    ```
+    postgres=# \du
+    ```
+    
+4.  Create a new database called `catalog` for the user: `catalog`:
+
+    ```
+    postgres=# CREATE DATABASE catalog WITH OWNER catalog;
+    ```
+    
+5.  Connect to the database:
+
+    ```
+    postgres=# \c catalog
+    ```
+    
+6. Revoke all rights on the database schema, and grant access to catalog only.
+
+    ```
+    catalog=# REVOKE ALL ON SCHEMA public FROM public;
+    catalog=# GRANT ALL ON SCHEMA public TO catalog;
+    ```
+    
+    Exit Postgresql and postgres user:
+    
+    ```
+    postgres=# \q
+    postgres@ip-10-20-30-101~$ exit
+    ```
+    
+7. Create Postgresql database schema:
+
+    ```
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ python database_setup.py
+    ```
+    
+    We can check that it worked. After you run `database_setup.py`, Go back to your postgres schema, and connect to `catalog` database.
+    
+    ```
+    postgres@ip-10-20-30-101:~$ psql
+    psql (9.3.12)
+    Type "help" for help.
+
+    postgres=# \c catalog
+    ```
+    
+    When you conect to the `catalog` database, you can view all the relations created by your `python database_setup.py` command.
+    
+    ```
+    catalog=# \dt
+    
+    ```
+    
+    Now exit postgres, and return to Virtual environment.
+    
+8.  Restart Apache:
+
+    ```
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo service apache2 restart
+    ```
+    
+    In your browser, put in your PUBLIC-IP-ADDRESS : `35.160.177.48`. If you follwed the steps accordingly, Your applciation should come up.
+    
+    If errors occur you can check the last 30 lines of the error log with: 
+    
+    ```
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo tail -30 /var/log/apache2/error.log
+    ```
 
 
 ----------
+
+
+### K - Get OAUTH-LOGINS (Google+ and Facebook) working.
+
+1.  To fix the `client_secrets.json` error, go to your '__init__.py' or 'catalog.py' file and change the following (should be near the top and in the login section:
+
+    ```python
+    app_token = json.loads(
+    open('g_client_secret.json', 'r').read())['web']['client_id']
+
+	oauth_flow:flow_from_clientsecrets('g_client_secret.json', scope='')
+    ```
+    
+    Add `/var/www/Catalog/catalog` to your code path.:
+    
+    ```python
+    app_token = json.loads(
+    open('/var/www/Catalog/catalog/g_client_secret.json', 'r').read())['web']['client_id']
+
+	
+	oauth_flow:flow_from_clientsecrets('/var/www/Catalog/catalog/g_client_secret.json', scope='')
+    ```
+    
+2. Enable virtual host - catalog.conf
+
+    ```
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo a2ensite catalog
+    ```
+
+3. To get Google+ authorization working, you must add your URL to google authorization just like what was done during the catalog project. (You will be addind to the catalog app):
+
+    (a) - On the Developer Console: http://console.developers.google.com, select your Project.
+    
+    (b) - Navigate to `Credentials`, and edit your `OAuth 2.0 client ID':
+    
+
+
+----------
+
+
+### L - Install and Configured Fail2ban intrusion protection that bans suspicious IPs.
+Reference: [DigitalOcean](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-fail2ban-on-ubuntu-14-04)
+    
+1.  Install Fail2ban application:
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo apt-get install fail2ban
+    ```
+    
+2.  Copy the default config file
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+    ```
+    
+3. Open `jail.local` and change the followinf default parameters:
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo nano /etc/fail2ban/jail.local
+    ```
+    
+4.  Set the following parameters:
+
+    ```
+    set bantime = 1600
+    destemail = YOURNAME@DOMAIN or YOUR-EMAIL
+    action = %(action_mwl)s
+    under [ssh] change port = 2200
+    ```
+
+5. Stop the service:
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo service fail2ban stop
+    ```
+    
+6. Start the service again:
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo service fail2ban start
+    ```
+    
+## FINALLY:
+Restart apache2 server, run your app by visiting your URL. 

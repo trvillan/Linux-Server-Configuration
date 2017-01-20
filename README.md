@@ -796,19 +796,19 @@ Reference: [DigitalOcean](https://www.digitalocean.com/community/tutorials/how-t
 
     ```python
     app_token = json.loads(
-    open('g_client_secret.json', 'r').read())['web']['client_id']
+    open('client_secret.json', 'r').read())['web']['client_id']
 
-	oauth_flow:flow_from_clientsecrets('g_client_secret.json', scope='')
+	oauth_flow:flow_from_clientsecrets('client_secret.json', scope='')
     ```
     
     Add `/var/www/Catalog/catalog` to your code path.:
     
     ```python
     app_token = json.loads(
-    open('/var/www/Catalog/catalog/g_client_secret.json', 'r').read())['web']['client_id']
+    open('/var/www/Catalog/catalog/client_secret.json', 'r').read())['web']['client_id']
 
 	
-	oauth_flow:flow_from_clientsecrets('/var/www/Catalog/catalog/g_client_secret.json', scope='')
+	oauth_flow:flow_from_clientsecrets('/var/www/Catalog/catalog/client_secret.json', scope='')
     ```
     
 2. Enable virtual host - catalog.conf

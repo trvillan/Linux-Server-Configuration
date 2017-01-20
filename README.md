@@ -330,3 +330,276 @@ Reference: [Ubuntu](https://help.ubuntu.com/community/UbuntuTime#Using_the_Comma
 
 
 ----------
+
+
+### G - Install and Configure Apache to serve a Python mod_wsgi application.
+
+1. Install Apache web Server:
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo apt-get install apache2
+    ```
+    
+2. In your browser, type in your public ip  address: `http://35.160.177.48`, and it should return - `It works!` Ubuntu page.
+        
+3. Install `mod_wsgi`, and `python-setuptools` helper package. This will serve Python apps from Apache:
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo apt-get install python-setuptools libapache2-mod-wsgi
+    ```
+    
+4. Configure Apache to handle requests using the `WSGI` module
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo nano cat /etc/apache2/sites-enabled/000-default.conf
+    ```
+    
+    Add the following line: `WSGIScriptAlias / /var/www/html/myapp.wsgi` at the end of the `<VirtualHost *:80> block, right before the closing </VirtualHost>`. Now save and quit the nano editor.
+        
+    Restart Apache: `sudo apache2ctl restart`
+
+5. To test (step can be skipped) create the `myapp.wsgi` file that was added to the deafult-conf file:
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo nano /var/www/html/myapp.wsgi
+    ```
+    Copy and paste the following:
+    
+    ```python
+    def application(environ, start_response):
+        status = '200 ok'
+        output = 'Hello World - Its Working'
+        
+        response_headers=[('content-type','text/plain'),('content-length', str(len(output)))]
+        start_response(status, response_headers)
+        return [output]
+    ```
+    
+    After you save the file, refresh/reload your browser and you should see `Hello World - Its working`. 
+    
+6. Restart Apache server to load mod_wsgi.
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo service apache2 restart
+    ```
+    
+7. To remove the message: `Could not reliably determine the server's fully qualified domain name...`:
+
+    (a) -  Create an Apache config file with the domain name:
+        
+    ```    
+    grader@ip-10-20-30-101:~$ echo "ServerName 52.39.26.86" | sudo tee /etc/apache2/conf-available/fqdn.conf
+    ```
+    
+    (b) -  Enable the file:
+    
+    ```
+    grader@ip-10-20-30-101:~$ sudo a2enconf fqdn
+    ```
+
+
+----------
+
+### H - Install Git and Setup Environment for delopying Flask Application. 
+Reference: [Github](https://github.com/elnobun/Item-Catalog-Movie-Collection-App-/tree/master/vagrant)
+
+1. Install Git:
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo apt-get install git
+    ```
+    
+2. Setup process for delopying Flask application:
+Reference: [DigitalOcean](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-flask-application-on-an-ubuntu-vps)
+
+    (a) - Add additional Python package to enable Apache serve Flask applications:
+    
+    ```
+    grader@ip-10-20-30-101:~$ sudo apt-get install libapache2-mod-wsgi python-dev
+    ```
+    
+    (b) - Enable `mod_wsgi` if it is not enabled already:
+    
+    ```
+    grader@ip-10-20-30-101:~$ sudo a2enmod wsgi
+    ```
+    
+    (c.) - Navigate to the `www` directory:
+    
+     ```
+    grader@ip-10-20-30-101:~$ cd /var/www
+    ```
+    
+    - Setup a directory folder. You can call it `Catalog`: This will hold our app,
+    
+        ```
+        grader@ip-10-20-30-101:/var/www$ sudo mkdir Catalog
+        ```
+    - cd `Catalog` and make another directory called `catalog`.
+    
+        ```
+        grader@ip-10-20-30-101:/var/www$ cd Catalog
+        grader@ip-10-20-30-101:/var/www/Catalog$ sudo mkdir catalog
+        ```
+    
+    - cd `catalog` and make a directory called `static templates` 
+    
+        ```        
+        grader@ip-10-20-30-101:/var/www/Catalog$ cd catalog
+        grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo mkdir static templates
+        ```
+        
+    - Inside `catalog` folder, create a flask applicaion logic file called `__init__.py` through the nano editor: *Note* `__init__.py` is written with double underscore like so: `_\_\init\_\_.py`.
+    
+        ```
+        grader@ip-10-20-25-175:/var/www/Catalog/catalog$ sudo nano __init__.py
+        ```
+        
+    - Inside the __init__.py  nano editor, paste this code:
+    
+        ```python
+        from flask import Flask
+        app = Flask(__name__)
+        @app.route("/")
+        def hello():
+            return "Hello, Catalog app coming up soon!"
+        if __name__ == "__main__":
+          app.run()
+        ```
+        
+       You can use `ls` or `ls -al` to view the content of your file path. 
+       
+       Next we  will test our Python Flask file:
+        
+3. Flask Installation and Virtual Environment configuration:
+    
+    (a) -  Install `pip` (good practice)
+    
+    ```            
+    grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo apt-get install python-pip
+    ```
+    
+    (b) -  Install virtual environment (virtualenv):
+    
+    ```
+    grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo pip install virtualenv
+    ```
+    
+    You can set the virtual environment name to a shorter name. e.g `venv`
+    
+    ```    
+    grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo virtualenv venv
+    ```
+    
+4.  Configure and Enable a New Virtual Host that will house our `.wsgi` file we are to create, just like we did while testing our `myapp.wsgi` file.
+
+    (a) - Create vitual host config file:
+    
+    ```        
+    grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo nano /etc/apache2/sites-available/catalog.conf
+    ```
+    - In the newly created `catalog.conf` file, paste in the following lines of code.
+        ```
+        <VirtualHost *:80>
+            ServerName 35.160.177.48
+            ServerAdmin admin@35.160.177.48
+            WSGIScriptAlias / /var/www/Catalog/catalog.wsgi
+            <Directory /var/www/Catalog/catalog/>
+                Order allow,deny
+                Allow from all
+            </Directory>
+            Alias /static /var/www/Catalog/catalog/static
+            <Directory /var/www/Catalog/catalog/static/>
+                Order allow,deny
+                Allow from all
+            </Directory>
+            ErrorLog ${APACHE_LOG_DIR}/error.log
+            LogLevel warn
+            CustomLog ${APACHE_LOG_DIR}/access.log combined
+        </VirtualHost>
+        ```
+     - Enable the Virtual Host.
+        
+        ```
+        grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo a2ensite catalog.wsgi         
+        ```
+    
+    (b) - Create the `catalog.wsgi` file that was defined in the host.
+    
+    - Go back to the `Catalog` folder:
+    
+        ```
+        grader@ip-10-20-30-101:/var/www/Catalog/catalog$ cd /var/www/Catalog
+        ```
+        
+    - Create the `catalog.wsgi` file, using the nano editor:
+    
+        ```
+        grader@ip-10-20-30-101:~/var/www/Catalog$ sudo nano catalog.wsgi
+        ```
+        
+    - Paste the following code inside the `catalog.wsgi` file
+    
+        ```python
+        #!/user/bin/python
+        import sys
+        import logging
+        logging.basicConfig(stream=sys.stderr)
+        sys.path.insert(0,"/var/www/Catalog/catalog/")
+        
+        from catalog import app as application
+        application.secret_key = 'Add your secret key'
+        ```
+        
+    - Restart Apache:
+        
+        ```
+        grader@ip-10-20-30-101:/var/www/Catalog$ sudo service apache2 restart 
+        ```
+        
+5. Clone Your (Project 3 - Item Catalog) respository
+
+    ```
+    grader@ip-10-20-30-101:/var/www/Catalog$ git clone https://github.com/elnobun/Item-Catalog-Movie-Collection-App-.git
+    ```
+
+6. Move all the contents of your cloned respository directory into `/var/www/Catalog/catalog`, and delete empty directory.
+
+    ```
+    grader@ip-10-20-30-101:/var/www/Catalog$ mv Item-Catalog-Movie-Collection-App-/* /var/Catalog/catalog
+    ```
+    
+7. Render your respository inaccessible:
+
+    (a) - Create a `.htaccess file`:
+    
+    ```
+    grader@ip-10-20-30-101:/var/www/Catalog$ sudo nano .htaccess
+    ```
+    
+    (b) - Add this to the opened nano .htaccess file : `RedirectMatch 404 /\.git`
+    
+8.  Install all the neeeded packages and modules for python.
+
+    (a) - FIrst activate your virtual environment:
+    
+    ```
+    grader@ip-10-20-30-101:/var/www/Catalog/catalog$ source venv/bin/activate
+    ```
+    
+    (b) - Install all these packages:
+    
+    ```
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo apt-get install python-setuptools
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo pip install Flask
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ pip install httplib2
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ pip install requests
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo pip install flask-seasurf
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo apt-get install python-psycopg2
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo pip install oauth2client
+    (venv) grader@ip-10-20-30-101:/var/www/Catalog/catalog$ sudo pip install sqlalchemy
+    ```
+    Restart apache: `sudo apache2ctl restart`.
+
+
+----------

@@ -176,3 +176,157 @@ Reference: [DigitalOcean](https://www.digitalocean.com/community/tutorials/how-t
 
 
 ----------
+
+
+
+### D - Change SSH Port from `22` to `2200` and Configure SSH access:
+Reference :[Ask Ubuntu](http://askubuntu.com/questions/16650/create-a-new-ssh-user-on-ubuntu-server)
+
+1. Change the SSH configuration file:
+
+    (a) -  Access the config file using nano editor:
+    
+    ```
+        root@ip-10-20-30-10:~# nano /etc/ssh/sshd_config
+    ```
+    while in the nano editor:
+  
+    (b) - Change `Port 22` to `Port 2200`.
+
+    (c) - Change `PermitRootLogin without-password` to `PermitRootLogin no`
+
+    (d) - Change `PasswordAuthentication no` to `PasswordAuthentication yes`. This is temporal.
+
+    (e) - At the end of the file, add `UseDNS no` and `AllowUsers grader`. This will allow grader SSH login access.
+
+    (f) - Exit nano editor: `ctrl+x, y then enter`, and Restart SSH service for changes.
+    
+    ``` 
+    root@ip-10-20-30-10:~# sudo service ssh restart
+    ```
+    Now you can connect to `grader` from local Machine using : 
+
+    ```
+    YOUR LOCAL MACHINE:~$ ssh grader@35.166.177.48 -p 2200
+    ```
+2. Create a SSH Key Pair:
+
+    (a) - Switch to your local machine by using the `exit` command: 
+    
+    ```
+    root@ip-10-20-30-10:~# exit
+    ```
+    
+    Now enter this command to generate a SSH key pair.
+   
+   ```
+    YOUR LOCAL MACHINE:~$ ssh-keygen
+   ```
+   
+   enter a `passphrase` which will prevent unauthroized access to the files.
+ 
+   Now you will see two files. Assuming you used the default `id_rsa`, you will see that ssh-keygen has generated `id_rsa` (private_key) and `id_rsa.pub` (public_key) file. The file `id_rsa.pub` will be placed on the server.
+
+    (b) - Switch to the remote server as `grader` and create a directory called `.ssh`
+    
+    ```
+    grader@ip-10-20-30-101:~$ mkdir .ssh
+    ```
+   
+   Create a new file within the `.ssh` directory called `authorized_keys`. A special file that will store the public keys.
+   
+    ```
+    grader@ip-10-20-30-101:~$ touch .ssh/authorized_keys
+    ```
+    
+    (c.) - Switch back to your Local Machine, and copy the contents of `id_rsa.pub`:
+    
+    ```
+    YOUR LOCAL MACHINE:~$ sudo cat ~/.ssh/ida_rsa.pub
+    ```
+    
+    (d) - Switch back to your Remote Server, edit authorized_keys file and paste the content of id_rsa.pub inside. Save file.
+    
+    ```
+    grader@ip-10-20-30-101:~$ sudo nano .ssh/authorized_keys
+    ```
+    
+    (e) - Set specific file permission on `SSH` and `authorized_keys` directories:
+    
+    ```
+    grader@ip-10-20-30-101:~$ chmod 700 .ssh
+    grader@ip-10-20-30-101:~$ chmod 644 .ssh/authorized_keys
+    ```
+    (f) - SSHD Configuration:
+    
+    ```
+    grader@ip-10-20-30-101:~$ sudo nano /etc/ssh/sshd_config
+    
+    Change the `PasswordAuthentication yes` to `PasswordAuthentication no`
+    ```
+    
+    To remove the `sudo: unable to resolve host...` warning after using sudo, follow these steps:
+    
+    - Open `sudo nano /etc/hostname`. 
+    - You will see something like this `ip-10-20-25-101`. Copy that 
+    - open `sudo nano /etc/hosts` and on the first line, append the hostname right before 127.0.0.1 localhost like so:
+    
+	    ```
+	    52.39.26.86 ip-10-20-25-101
+		127.0.0.1 localhost
+	    ```
+
+
+----------
+
+
+### E - Configure UFW to only allow incoming connections for SSH(Port:2200), HTTP(Port:80) and NTP(Port:123).
+
+1. Check the status of UFW. Make sure it is `inactive`:
+    
+    ```        
+    grader@ip-10-20-30-101:~$ sudo ufw status
+    ```
+    
+2. Deny all incoming connections as default so that we can allow the ones we need.
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo ufw default deny incoming
+    ```
+    
+3. Allow incoming TCP connection on SSH(Port:2200), HTTP(Port:80), NTP(Port:123)
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo ufw allow 2200/tcp
+    grader@ip-10-20-30-101:~$ sudo ufw allow 80/tcp
+    grader@ip-10-20-30-101:~$ sudo ufw allow 123/udp
+    ```    
+4. Enable the firewall: 
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo ufw enable
+    ```
+
+
+----------
+
+
+### F - Configure local Time Zone to UTC
+Reference: [Ubuntu](https://help.ubuntu.com/community/UbuntuTime#Using_the_Command_Line_.28terminal.29)
+
+1. Open Timezone selection dialog:
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo dpkg-reconfigure tzdata
+    ```
+
+2. Choose and type `None of the above`, then choose `UTC`.
+
+3. Setup `ntp daemon` to improve time sync:
+
+    ```
+    grader@ip-10-20-30-101:~$ sudo apt-get install ntp
+    ```
+
+
+----------

@@ -388,7 +388,7 @@ Reference: [Ubuntu](https://help.ubuntu.com/community/UbuntuTime#Using_the_Comma
     (a) -  Create an Apache config file with the domain name:
         
     ```    
-    grader@ip-10-20-30-101:~$ echo "ServerName 52.39.26.86" | sudo tee /etc/apache2/conf-available/fqdn.conf
+    grader@ip-10-20-30-101:~$ echo "ServerName 35.160.177.48" | sudo tee /etc/apache2/conf-available/fqdn.conf
     ```
     
     (b) -  Enable the file:
